@@ -1,101 +1,91 @@
-/**
- * BookMyStayApp
- *
- * Entry point for the Hotel Booking Management System.
- * This program prints a welcome message when the application starts.
- *
- * @author srikartankala
- * @version 3.0
- */
+import java.util.*;
 
-import java.util.HashMap;
-import java.util.Map;
-
-class Room {
-    private String type;
-    private int beds;
-    private int size;
-    private double price;
-
-    public Room(String type, int beds, int size, double price) {
-        this.type = type;
-        this.beds = beds;
-        this.size = size;
-        this.price = price;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public int getBeds() {
-        return beds;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    public double getPrice() {
-        return price;
+class InvalidBookingException extends Exception {
+    public InvalidBookingException(String message) {
+        super(message);
     }
 }
 
 class RoomInventory {
-    private Map<String, Integer> roomAvailability;
+    private Map<String, Integer> rooms = new HashMap<>();
 
     public RoomInventory() {
-        roomAvailability = new HashMap<>();
-        initializeInventory();
+        rooms.put("Single", 2);
+        rooms.put("Double", 2);
+        rooms.put("Suite", 1);
     }
 
-    private void initializeInventory() {
-        roomAvailability.put("Single", 5);
-        roomAvailability.put("Double", 3);
-        roomAvailability.put("Suite", 2);
+    public boolean isValidRoomType(String roomType) {
+        return rooms.containsKey(roomType);
     }
 
-    public Map<String, Integer> getRoomAvailability() {
-        return roomAvailability;
+    public boolean isAvailable(String roomType) {
+        return rooms.get(roomType) > 0;
     }
 
-    public void updateAvailability(String roomType, int count) {
-        roomAvailability.put(roomType, count);
+    public void bookRoom(String roomType) {
+        rooms.put(roomType, rooms.get(roomType) - 1);
+    }
+}
+
+class ReservationValidator {
+    public void validate(String guestName, String roomType, RoomInventory inventory)
+            throws InvalidBookingException {
+
+        if (guestName == null || guestName.trim().isEmpty()) {
+            throw new InvalidBookingException("Guest name cannot be empty.");
+        }
+
+        if (!inventory.isValidRoomType(roomType)) {
+            throw new InvalidBookingException("Invalid room type selected.");
+        }
+
+        if (!inventory.isAvailable(roomType)) {
+            throw new InvalidBookingException("Room not available.");
+        }
+    }
+}
+
+class BookingRequestQueue {
+    private Queue<String> queue = new LinkedList<>();
+
+    public void addRequest(String request) {
+        queue.offer(request);
+    }
+
+    public String processRequest() {
+        return queue.poll();
     }
 }
 
 public class BookMyStayApp {
     public static void main(String[] args) {
+        System.out.println("Booking Validation");
+
+        Scanner scanner = new Scanner(System.in);
 
         RoomInventory inventory = new RoomInventory();
+        ReservationValidator validator = new ReservationValidator();
+        BookingRequestQueue bookingQueue = new BookingRequestQueue();
 
-        Room single = new Room("Single", 1, 250, 1500.0);
-        Room doubleRoom = new Room("Double", 2, 400, 2500.0);
-        Room suite = new Room("Suite", 3, 750, 5000.0);
+        try {
+            System.out.print("Enter guest name: ");
+            String guestName = scanner.nextLine();
 
-        Map<String, Integer> availability = inventory.getRoomAvailability();
+            System.out.print("Enter room type (Single/Double/Suite): ");
+            String roomType = scanner.nextLine();
 
-        System.out.println("Hotel Room Inventory Status\n");
+            validator.validate(guestName, roomType, inventory);
 
-        System.out.println("Single Room:");
-        System.out.println("Beds: " + single.getBeds());
-        System.out.println("Size: " + single.getSize() + " sqft");
-        System.out.println("Price per night: " + single.getPrice());
-        System.out.println("Available Rooms: " + availability.get(single.getType()));
-        System.out.println();
+            inventory.bookRoom(roomType);
+            bookingQueue.addRequest(guestName + " booked " + roomType);
 
-        System.out.println("Double Room:");
-        System.out.println("Beds: " + doubleRoom.getBeds());
-        System.out.println("Size: " + doubleRoom.getSize() + " sqft");
-        System.out.println("Price per night: " + doubleRoom.getPrice());
-        System.out.println("Available Rooms: " + availability.get(doubleRoom.getType()));
-        System.out.println();
+            System.out.println("Booking successful!");
 
-
-        System.out.println("Suite Room:");
-        System.out.println("Beds: " + suite.getBeds());
-        System.out.println("Size: " + suite.getSize() + " sqft");
-        System.out.println("Price per night: " + suite.getPrice());
-        System.out.println("Available Rooms: " + availability.get(suite.getType()));
+        } catch (InvalidBookingException e) {
+            System.out.println("Booking failed: " + e.getMessage());
+        } finally {
+            scanner.close();
+        }
     }
 }
